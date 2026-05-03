@@ -24,4 +24,4 @@ Interactive quiz interface with scoring system and dynamic question rendering.
 
 
 
-“I developed an interactive quiz application using JavaScript with dynamic question rendering, instant answer feedback, responsive UI, and score tracking. The project helped me strengthen my DOM manipulation and event handling concepts.”
+I developed an interactive quiz application using JavaScript with dynamic question rendering, instant answer feedback, responsive UI, and score tracking. The project helped me strengthen my DOM manipulation and event handling concepts.
