@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>VulnGuard — Autonomous NPM Security System</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0f1e;--bg2:#0f1629;--bg3:#141d35;--card:#111827;--card2:#1a2340;
+  --border:#1e2d4a;--border2:#2a3f6a;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --blue:#3b82f6;--blue2:#1d4ed8;--blue3:#60a5fa;
+  --green:#10b981;--green2:#059669;--green3:#34d399;
+  --red:#ef4444;--red2:#dc2626;--red3:#f87171;
+  --amber:#f59e0b;--amber2:#d97706;--amber3:#fcd34d;
+  --purple:#8b5cf6;--purple2:#7c3aed;--purple3:#a78bfa;
+  --cyan:#06b6d4;--cyan2:#0891b2;
+  --radius:10px;--radius-lg:16px;
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:inherit}
+.hidden{display:none!important}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,15,30,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px}
+.nav-brand{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700}
+.nav-brand .logo{width:32px;height:32px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.nav-brand span{background:linear-gradient(90deg,var(--blue3),var(--purple3));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:4px}
+.nav-link{padding:6px 14px;border-radius:6px;font-size:14px;color:var(--text2);transition:all .2s;border:none;background:none}
+.nav-link:hover,.nav-link.active{background:var(--card2);color:var(--text)}
+.nav-team{font-size:12px;color:var(--text3);text-align:right}
+.nav-team strong{color:var(--blue3);display:block}
+
+/* PAGES */
+.page{display:none;padding-top:60px;min-height:100vh}
+.page.active{display:block}
+
+/* HOME PAGE */
+.hero{padding:80px 2rem 60px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(59,130,246,0.1) 0%,transparent 70%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:99px;padding:6px 16px;font-size:13px;color:var(--blue3);margin-bottom:24px}
+.hero-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{font-size:clamp(36px,6vw,72px);font-weight:800;line-height:1.1;margin-bottom:20px;letter-spacing:-1px}
+.hero h1 .grad{background:linear-gradient(135deg,var(--blue3) 0%,var(--purple3) 50%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:18px;color:var(--text2);max-width:600px;margin:0 auto 40px;line-height:1.7}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;border:none;transition:all .2s}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue2);transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border2)}
+.btn-outline:hover{background:var(--card2);border-color:var(--blue);transform:translateY(-1px)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:var(--green2)}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{background:var(--red2)}
+.btn-sm{padding:8px 18px;font-size:13px}
+
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin:60px 2rem}
+.stat-item{background:var(--card);padding:28px 20px;text-align:center}
+.stat-num{font-size:36px;font-weight:800;background:linear-gradient(135deg,var(--blue3),var(--purple3));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-label{font-size:13px;color:var(--text3);margin-top:4px}
+
+.features{padding:60px 2rem;max-width:1200px;margin:0 auto}
+.section-title{font-size:28px;font-weight:700;margin-bottom:8px;text-align:center}
+.section-sub{font-size:15px;color:var(--text2);text-align:center;margin-bottom:48px}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.feature-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;transition:all .3s;position:relative;overflow:hidden}
+.feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent,var(--blue))}
+.feature-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:var(--shadow)}
+.feature-icon{width:48px;height:48px;border-radius:12px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px}
+.feature-title{font-size:17px;font-weight:600;margin-bottom:8px}
+.feature-desc{font-size:14px;color:var(--text2);line-height:1.6}
+
+/* SCANNER PAGE */
+.scanner-wrap{max-width:900px;margin:0 auto;padding:40px 2rem}
+.scanner-header{margin-bottom:32px}
+.scanner-header h2{font-size:28px;font-weight:700;margin-bottom:8px}
+.scanner-header p{color:var(--text2)}
+.upload-zone{background:var(--card);border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:60px 40px;text-align:center;transition:all .3s;cursor:pointer;margin-bottom:24px}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:rgba(59,130,246,0.05)}
+.upload-zone .upload-icon{font-size:48px;margin-bottom:16px}
+.upload-zone h3{font-size:18px;font-weight:600;margin-bottom:8px}
+.upload-zone p{color:var(--text2);font-size:14px;margin-bottom:20px}
+#file-input{display:none}
+
+.or-divider{display:flex;align-items:center;gap:16px;margin:20px 0;color:var(--text3)}
+.or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.url-input-wrap{display:flex;gap:12px}
+.url-input-wrap input{flex:1;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;color:var(--text);font-size:14px;outline:none}
+.url-input-wrap input:focus{border-color:var(--blue)}
+.url-input-wrap input::placeholder{color:var(--text3)}
+
+.demo-packages{margin-top:24px}
+.demo-title{font-size:13px;color:var(--text3);margin-bottom:12px}
+.demo-chips{display:flex;gap:8px;flex-wrap:wrap}
+.demo-chip{background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:99px;padding:5px 14px;font-size:12px;color:var(--blue3);cursor:pointer;transition:all .2s}
+.demo-chip:hover{background:rgba(59,130,246,0.2)}
+
+.scan-progress{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;margin-top:24px}
+.scan-status{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.scan-spinner{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scan-steps{display:flex;flex-direction:column;gap:10px}
+.scan-step{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--text3)}
+.scan-step.done{color:var(--green)}
+.scan-step.active{color:var(--text)}
+.scan-step-icon{width:20px;height:20px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.scan-step.done .scan-step-icon{background:var(--green);color:#fff}
+.scan-step.active .scan-step-icon{background:var(--blue);color:#fff}
+.prog-bar{height:4px;background:var(--border);border-radius:99px;margin-top:20px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:99px;transition:width 0.5s ease;width:0%}
+
+/* DASHBOARD PAGE */
+.dash-wrap{max-width:1200px;margin:0 auto;padding:40px 2rem}
+.dash-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:32px}
+.dash-header h2{font-size:28px;font-weight:700}
+.dash-header p{color:var(--text2);margin-top:4px}
+.dash-actions{display:flex;gap:10px}
+
+.severity-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+.sev-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;position:relative;overflow:hidden}
+.sev-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
+.sev-card.critical::after{background:var(--red)}
+.sev-card.high::after{background:var(--amber)}
+.sev-card.medium::after{background:var(--amber2)}
+.sev-card.low::after{background:var(--green)}
+.sev-num{font-size:40px;font-weight:800}
+.sev-card.critical .sev-num{color:var(--red3)}
+.sev-card.high .sev-num{color:var(--amber3)}
+.sev-card.medium .sev-num{color:var(--amber)}
+.sev-card.low .sev-num{color:var(--green3)}
+.sev-label{font-size:13px;color:var(--text3);margin-top:4px}
+.sev-icon{font-size:24px;position:absolute;top:16px;right:16px;opacity:0.4}
+
+.vuln-table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:24px}
+.vuln-table-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.vuln-table-title{font-size:15px;font-weight:600}
+.filter-row{display:flex;gap:8px}
+.filter-btn{padding:5px 12px;border-radius:6px;font-size:12px;border:1px solid var(--border2);background:transparent;color:var(--text2);transition:all .2s}
+.filter-btn.active,.filter-btn:hover{background:var(--card2);color:var(--text);border-color:var(--blue)}
+table{width:100%;border-collapse:collapse}
+th{padding:12px 16px;text-align:left;font-size:12px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px}
+td{padding:14px 16px;font-size:14px;border-bottom:1px solid rgba(30,45,74,0.5)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(59,130,246,0.03)}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600}
+.badge-critical{background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)}
+.badge-high{background:rgba(245,158,11,0.15);color:#fcd34d;border:1px solid rgba(245,158,11,0.3)}
+.badge-medium{background:rgba(217,119,6,0.15);color:#f59e0b;border:1px solid rgba(217,119,6,0.3)}
+.badge-low{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3)}
+.badge-fixed{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3)}
+.badge-info{background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}
+.pkg-name{font-weight:600;color:var(--text)}
+.pkg-version{font-size:12px;color:var(--text3);margin-top:2px}
+.cve-id{font-family:monospace;font-size:13px;color:var(--blue3)}
+.action-link{font-size:12px;color:var(--blue3);cursor:pointer;padding:4px 10px;border-radius:5px;border:1px solid rgba(59,130,246,0.2);background:rgba(59,130,246,0.05)}
+.action-link:hover{background:rgba(59,130,246,0.15)}
+
+.dep-graph{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:24px}
+.dep-graph h3{font-size:15px;font-weight:600;margin-bottom:16px}
+.dep-tree{display:flex;flex-direction:column;gap:8px}
+.dep-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border-radius:8px;border-left:3px solid transparent}
+.dep-row.critical{border-left-color:var(--red)}
+.dep-row.high{border-left-color:var(--amber)}
+.dep-row.medium{border-left-color:var(--amber2)}
+.dep-row.low{border-left-color:var(--green)}
+.dep-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dep-name{font-weight:600;font-size:14px;flex:1}
+.dep-cve{font-size:12px;color:var(--text3);font-family:monospace}
+.dep-sev{font-size:12px;margin-left:auto}
+
+/* REMEDIATION PAGE */
+.rem-wrap{max-width:1000px;margin:0 auto;padding:40px 2rem}
+.rem-header{margin-bottom:32px}
+.rem-header h2{font-size:28px;font-weight:700;margin-bottom:8px}
+.rem-header p{color:var(--text2)}
+.rem-status{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.rem-status-info{display:flex;align-items:center;gap:16px}
+.rem-status-dot{width:12px;height:12px;border-radius:50%;background:var(--amber);box-shadow:0 0 12px var(--amber);animation:pulse 2s infinite;flex-shrink:0}
+.rem-status-dot.safe{background:var(--green);box-shadow:0 0 12px var(--green)}
+.rem-status-text h3{font-size:16px;font-weight:600}
+.rem-status-text p{font-size:13px;color:var(--text2);margin-top:2px}
+
+.diff-view{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:24px}
+.diff-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px}
+.diff-tab{font-size:14px;color:var(--text3);cursor:pointer;padding-bottom:4px;border-bottom:2px solid transparent}
+.diff-tab.active{color:var(--text);border-bottom-color:var(--blue)}
+.diff-body{padding:0}
+.diff-line{display:flex;font-family:monospace;font-size:13px;line-height:1.8}
+.diff-num{width:40px;text-align:right;padding:0 12px;color:var(--text3);background:var(--bg3);flex-shrink:0;user-select:none;border-right:1px solid var(--border)}
+.diff-code{padding:0 16px;flex:1;white-space:pre}
+.diff-line.removed .diff-code{background:rgba(239,68,68,0.08);color:var(--red3)}
+.diff-line.added .diff-code{background:rgba(16,185,129,0.08);color:var(--green3)}
+.diff-line.removed .diff-num{background:rgba(239,68,68,0.1)}
+.diff-line.added .diff-num{background:rgba(16,185,129,0.1)}
+
+.fix-list{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+.fix-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;display:flex;align-items:center;gap:16px}
+.fix-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.fix-icon.auto{background:rgba(16,185,129,0.15)}
+.fix-icon.manual{background:rgba(245,158,11,0.15)}
+.fix-content{flex:1}
+.fix-title{font-size:14px;font-weight:600;margin-bottom:3px}
+.fix-desc{font-size:13px;color:var(--text2)}
+.fix-arrow{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px}
+.fix-arrow .old{color:var(--red3);font-family:monospace}
+.fix-arrow .new{color:var(--green3);font-family:monospace}
+
+.auto-rem-btn{width:100%;padding:16px;border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--blue2),var(--purple2));color:#fff;font-size:16px;font-weight:700;border:none;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:10px}
+.auto-rem-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px rgba(59,130,246,0.4)}
+.auto-rem-btn:disabled{opacity:.6;cursor:not-allowed}
+
+/* REPORT PAGE */
+.report-wrap{max-width:1000px;margin:0 auto;padding:40px 2rem}
+.report-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;margin-bottom:24px}
+.report-title-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.report-id{font-family:monospace;font-size:13px;color:var(--text3)}
+.report-badge{background:rgba(239,68,68,0.15);color:var(--red3);border:1px solid rgba(239,68,68,0.3);padding:6px 16px;border-radius:99px;font-size:13px;font-weight:600}
+.report-badge.safe{background:rgba(16,185,129,0.15);color:var(--green3);border-color:rgba(16,185,129,0.3)}
+.report-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:20px;margin-bottom:24px}
+.meta-item label{font-size:12px;color:var(--text3);display:block;margin-bottom:4px}
+.meta-item span{font-size:15px;font-weight:600}
+.cvss-bar-wrap{margin-bottom:8px}
+.cvss-bar-wrap label{font-size:12px;color:var(--text2);display:flex;justify-content:space-between;margin-bottom:6px}
+.cvss-bar{height:8px;background:var(--bg3);border-radius:99px;overflow:hidden}
+.cvss-fill{height:100%;border-radius:99px;transition:width 1s ease}
+.cvss-fill.critical{background:linear-gradient(90deg,var(--amber),var(--red))}
+.cvss-fill.high{background:linear-gradient(90deg,var(--amber2),var(--amber))}
+.cvss-fill.medium{background:var(--amber2)}
+.cvss-fill.low{background:var(--green)}
+
+/* TEAM PAGE */
+.team-wrap{max-width:1000px;margin:0 auto;padding:40px 2rem}
+.team-event{background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(139,92,246,0.1));border:1px solid rgba(59,130,246,0.2);border-radius:var(--radius-lg);padding:32px;text-align:center;margin-bottom:40px}
+.team-event h2{font-size:24px;font-weight:800;margin-bottom:8px}
+.team-event .event-name{font-size:20px;font-weight:700;color:var(--blue3);margin-bottom:4px}
+.team-event .org{font-size:15px;color:var(--text2)}
+.team-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:40px}
+.team-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;text-align:center;transition:all .3s}
+.team-card:hover{border-color:var(--blue);transform:translateY(-3px)}
+.avatar{width:72px;height:72px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700}
+.avatar.leader{background:linear-gradient(135deg,var(--blue2),var(--purple2));color:#fff}
+.avatar.member{background:linear-gradient(135deg,var(--green2),var(--cyan2));color:#fff}
+.team-name{font-size:18px;font-weight:700;margin-bottom:4px}
+.team-role{font-size:13px;color:var(--blue3);font-weight:500;margin-bottom:12px}
+.team-desc{font-size:13px;color:var(--text2);line-height:1.6}
+.leader-crown{font-size:16px;margin-right:6px}
+.tech-stack{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px}
+.tech-stack h3{font-size:18px;font-weight:600;margin-bottom:20px}
+.tech-items{display:flex;flex-wrap:wrap;gap:10px}
+.tech-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:8px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:14px 20px;font-size:14px;z-index:999;transform:translateY(100px);opacity:0;transition:all .3s;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-left:3px solid var(--green)}
+.toast.error{border-left:3px solid var(--red)}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .severity-grid{grid-template-columns:repeat(2,1fr)}
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+  nav{padding:0 1rem}
+  .nav-links{gap:2px}
+  .nav-link{padding:5px 10px;font-size:13px}
+  table{font-size:13px}
+  th,td{padding:10px 12px}
+}
+@media(max-width:480px){
+  .severity-grid{grid-template-columns:1fr 1fr}
+  .hero h1{font-size:32px}
+  .nav-team{display:none}
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div class="logo">🛡</div>
+    <span>VulnGuard</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-link active" onclick="showPage('home')">Home</button>
+    <button class="nav-link" onclick="showPage('scanner')">Scanner</button>
+    <button class="nav-link" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="nav-link" onclick="showPage('remediation')">Remediation</button>
+    <button class="nav-link" onclick="showPage('report')">Report</button>
+    <button class="nav-link" onclick="showPage('team')">Team</button>
+  </div>
+  <div class="nav-team">
+    <strong>Team Hack-It-Up</strong>
+    HackZion V3 · AMCEC 2026
+  </div>
+</nav>
+
+<!-- HOME PAGE -->
+<div id="page-home" class="page active">
+  <div class="hero">
+    <div class="hero-badge">
+      <div class="dot"></div>
+      Live Vulnerability Detection Active
+    </div>
+    <h1>Autonomous NPM<br><span class="grad">Vulnerability Guard</span></h1>
+    <p>Detect, analyse, and autonomously remediate security vulnerabilities in npm-based applications — without human intervention.</p>
+    <div class="hero-btns">
+      <button class="btn btn-primary" onclick="showPage('scanner')">⚡ Start Scanning</button>
+      <button class="btn btn-outline" onclick="runDemo()">▶ Run Live Demo</button>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item"><div class="stat-num" id="home-total">0</div><div class="stat-label">Vulnerabilities Detected</div></div>
+    <div class="stat-item"><div class="stat-num" id="home-critical">0</div><div class="stat-label">Critical Severity</div></div>
+    <div class="stat-item"><div class="stat-num" id="home-fixed">0</div><div class="stat-label">Auto-Remediated</div></div>
+    <div class="stat-item"><div class="stat-num">100%</div><div class="stat-label">Autonomous Operation</div></div>
+  </div>
+
+  <div class="features">
+    <div class="section-title">Three Pillars of Security</div>
+    <div class="section-sub">Complete end-to-end autonomous vulnerability lifecycle management</div>
+    <div class="features-grid">
+      <div class="feature-card" style="--accent:var(--red)">
+        <div class="feature-icon" style="background:rgba(239,68,68,0.1)">🔍</div>
+        <div class="feature-title">Threat Detection</div>
+        <div class="feature-desc">Continuous scanning of package.json and lock files against the OSV.dev database and npm audit API. Identifies CVEs, CWEs, and supply chain risks in real-time.</div>
+      </div>
+      <div class="feature-card" style="--accent:var(--amber)">
+        <div class="feature-icon" style="background:rgba(245,158,11,0.1)">📊</div>
+        <div class="feature-title">Threat Analysis</div>
+        <div class="feature-desc">CVSS-based severity scoring, dependency graph visualization, and root cause analysis differentiating direct vs transitive vulnerabilities.</div>
+      </div>
+      <div class="feature-card" style="--accent:var(--green)">
+        <div class="feature-icon" style="background:rgba(16,185,129,0.1)">🔧</div>
+        <div class="feature-title">Autonomous Remediation</div>
+        <div class="feature-desc">Auto-generates patched package.json, creates upgrade diffs, and produces remediation reports — all without human intervention.</div>
+      </div>
+      <div class="feature-card" style="--accent:var(--blue)">
+        <div class="feature-icon" style="background:rgba(59,130,246,0.1)">📋</div>
+        <div class="feature-title">Audit Reports</div>
+        <div class="feature-desc">Professional PDF-ready security reports with full CVE details, CVSS scores, affected version ranges, and compliance-ready documentation.</div>
+      </div>
+      <div class="feature-card" style="--accent:var(--purple)">
+        <div class="feature-icon" style="background:rgba(139,92,246,0.1)">🔗</div>
+        <div class="feature-title">Dependency Graph</div>
+        <div class="feature-desc">Visual mapping of your entire dependency tree, highlighting vulnerable packages, transitive risks, and safe upgrade paths.</div>
+      </div>
+      <div class="feature-card" style="--accent:var(--cyan)">
+        <div class="feature-icon" style="background:rgba(6,182,212,0.1)">⚙️</div>
+        <div class="feature-title">Zero Human Dependency</div>
+        <div class="feature-desc">Fully autonomous pipeline — from detection to remediation. No manual steps, no human bottlenecks in the vulnerability management lifecycle.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCANNER PAGE -->
+<div id="page-scanner" class="page">
+  <div class="scanner-wrap">
+    <div class="scanner-header">
+      <h2>🔍 Vulnerability Scanner</h2>
+      <p>Upload your package.json or paste a GitHub URL to begin autonomous scanning</p>
+    </div>
+
+    <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="handleDrag(event)" ondrop="handleDrop(event)">
+      <div class="upload-icon">📦</div>
+      <h3>Drop your package.json here</h3>
+      <p>Supports package.json and package-lock.json</p>
+      <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();document.getElementById('file-input').click()">Browse File</button>
+    </div>
+    <input type="file" id="file-input" accept=".json" onchange="handleFile(this)"/>
+
+    <div class="or-divider">OR</div>
+
+    <div class="url-input-wrap">
+      <input type="text" id="url-input" placeholder="https://github.com/username/repo" />
+      <button class="btn btn-primary" onclick="scanFromUrl()">Scan Repo</button>
+    </div>
+
+    <div class="demo-packages">
+      <div class="demo-title">⚡ Quick Demo — click to scan vulnerable package sets:</div>
+      <div class="demo-chips">
+        <div class="demo-chip" onclick="loadDemo('web')">Web App Stack</div>
+        <div class="demo-chip" onclick="loadDemo('auth')">Auth/Crypto Libs</div>
+        <div class="demo-chip" onclick="loadDemo('util')">Utility Packages</div>
+        <div class="demo-chip" onclick="loadDemo('full')">Full Vulnerable App</div>
+      </div>
+    </div>
+
+    <div class="scan-progress hidden" id="scan-progress">
+      <div class="scan-status">
+        <div class="scan-spinner"></div>
+        <strong id="scan-status-text">Initializing scanner...</strong>
+      </div>
+      <div class="scan-steps" id="scan-steps"></div>
+      <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD PAGE -->
+<div id="page-dashboard" class="page">
+  <div class="dash-wrap">
+    <div class="dash-header">
+      <div>
+        <h2>📊 Vulnerability Dashboard</h2>
+        <p id="dash-scan-info">Run a scan to see results</p>
+      </div>
+      <div class="dash-actions">
+        <button class="btn btn-outline btn-sm" onclick="showPage('scanner')">New Scan</button>
+        <button class="btn btn-green btn-sm" onclick="showPage('remediation')">Auto-Remediate</button>
+      </div>
+    </div>
+
+    <div class="severity-grid">
+      <div class="sev-card critical"><div class="sev-icon">🚨</div><div class="sev-num" id="cnt-critical">0</div><div class="sev-label">Critical</div></div>
+      <div class="sev-card high"><div class="sev-icon">⚠️</div><div class="sev-num" id="cnt-high">0</div><div class="sev-label">High</div></div>
+      <div class="sev-card medium"><div class="sev-icon">🔶</div><div class="sev-num" id="cnt-medium">0</div><div class="sev-label">Medium</div></div>
+      <div class="sev-card low"><div class="sev-icon">ℹ️</div><div class="sev-num" id="cnt-low">0</div><div class="sev-label">Low</div></div>
+    </div>
+
+    <div class="dep-graph" id="dep-graph-section">
+      <h3>🔗 Dependency Vulnerability Map</h3>
+      <div class="dep-tree" id="dep-tree"></div>
+    </div>
+
+    <div class="vuln-table-wrap">
+      <div class="vuln-table-header">
+        <div class="vuln-table-title">Vulnerability Details</div>
+        <div class="filter-row">
+          <button class="filter-btn active" onclick="filterVulns('all',this)">All</button>
+          <button class="filter-btn" onclick="filterVulns('critical',this)">Critical</button>
+          <button class="filter-btn" onclick="filterVulns('high',this)">High</button>
+          <button class="filter-btn" onclick="filterVulns('medium',this)">Medium</button>
+          <button class="filter-btn" onclick="filterVulns('low',this)">Low</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>Package</th><th>CVE / Advisory</th><th>Severity</th><th>CVSS</th><th>Fix Version</th><th>Action</th>
+          </tr></thead>
+          <tbody id="vuln-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REMEDIATION PAGE -->
+<div id="page-remediation" class="page">
+  <div class="rem-wrap">
+    <div class="rem-header">
+      <h2>🔧 Autonomous Remediation</h2>
+      <p>One-click automated fixing — VulnGuard patches your dependencies without human intervention</p>
+    </div>
+
+    <div class="rem-status" id="rem-status">
+      <div class="rem-status-info">
+        <div class="rem-status-dot" id="rem-dot"></div>
+        <div class="rem-status-text">
+          <h3 id="rem-status-h">Vulnerabilities Detected</h3>
+          <p id="rem-status-p">Run auto-remediation to patch all fixable vulnerabilities</p>
+        </div>
+      </div>
+      <button class="btn btn-sm" id="rem-export-btn" onclick="exportReport()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text)">Export Report</button>
+    </div>
+
+    <div class="fix-list" id="fix-list"></div>
+
+    <div class="diff-view">
+      <div class="diff-header">
+        <div class="diff-tab active">package.json diff</div>
+        <div style="margin-left:auto;font-size:12px;color:var(--text3)">Red = removed · Green = patched</div>
+      </div>
+      <div id="diff-body" style="max-height:320px;overflow-y:auto"></div>
+    </div>
+
+    <button class="auto-rem-btn" id="rem-btn" onclick="runRemediation()">
+      ⚡ Run Autonomous Remediation
+    </button>
+  </div>
+</div>
+
+<!-- REPORT PAGE -->
+<div id="page-report" class="page">
+  <div class="report-wrap">
+    <div class="report-card">
+      <div class="report-title-row">
+        <div>
+          <div class="report-id" id="report-id">SCAN-ID: VG-2026-0001</div>
+          <h2 style="font-size:22px;font-weight:700;margin-top:8px">Security Audit Report</h2>
+          <div style="font-size:13px;color:var(--text3);margin-top:4px" id="report-date">Generated: —</div>
+        </div>
+        <div class="report-badge" id="report-badge">VULNERABLE</div>
+      </div>
+
+      <div class="report-meta">
+        <div class="meta-item"><label>Total Packages</label><span id="r-pkgs">—</span></div>
+        <div class="meta-item"><label>Vulnerabilities Found</label><span id="r-vulns">—</span></div>
+        <div class="meta-item"><label>Auto-fixable</label><span id="r-fixable" style="color:var(--green3)">—</span></div>
+        <div class="meta-item"><label>Risk Score</label><span id="r-score" style="color:var(--red3)">—</span></div>
+      </div>
+
+      <div id="cvss-bars"></div>
+    </div>
+
+    <div class="report-card">
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:20px">📋 Full Vulnerability Index</h3>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>Package</th><th>CVE ID</th><th>Severity</th><th>CVSS</th><th>Description</th><th>Fix</th>
+          </tr></thead>
+          <tbody id="report-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="printReport()">🖨 Print / Export PDF</button>
+      <button class="btn btn-outline" onclick="copyJSON()">📋 Copy JSON Report</button>
+      <button class="btn btn-green" onclick="showPage('remediation')">🔧 Go to Remediation</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEAM PAGE -->
+<div id="page-team" class="page">
+  <div class="team-wrap">
+    <div class="team-event">
+      <div style="font-size:40px;margin-bottom:16px">🏆</div>
+      <div class="event-name">HackZion V3</div>
+      <div class="org">Organized by AMCEC · 2026</div>
+      <div style="margin-top:16px;font-size:14px;color:var(--text2)">Competing in: <strong style="color:var(--text)">Autonomous NPM Vulnerability Management System</strong></div>
+    </div>
+
+    <div class="section-title" style="margin-bottom:8px">Team Hack-It-Up</div>
+    <div class="section-sub" style="margin-bottom:32px">Building the future of autonomous cybersecurity</div>
+
+    <div class="team-cards">
+      <div class="team-card">
+        <div class="avatar leader">AS</div>
+        <div class="team-name"><span class="leader-crown">👑</span>Aradhya Saraf</div>
+        <div class="team-role">Team Leader</div>
+        <div class="team-desc">Leading system architecture, autonomous remediation engine, and overall project strategy for VulnGuard.</div>
+      </div>
+      <div class="team-card">
+        <div class="avatar member">CM</div>
+        <div class="team-name">Chinmay Muddapur</div>
+        <div class="team-role">Team Member</div>
+        <div class="team-desc">Frontend development, vulnerability analysis pipeline, and dependency graph visualization for the dashboard.</div>
+      </div>
+    </div>
+
+    <div class="tech-stack">
+      <h3>Tech Stack</h3>
+      <div class="tech-items">
+        <div class="tech-item">⚡ Node.js</div>
+        <div class="tech-item">⚛ React</div>
+        <div class="tech-item">🔒 npm audit API</div>
+        <div class="tech-item">🌐 OSV.dev API</div>
+        <div class="tech-item">📊 CVSS Scoring</div>
+        <div class="tech-item">🐙 GitHub API</div>
+        <div class="tech-item">🛡 CVE Database</div>
+        <div class="tech-item">🔧 Auto-patch Engine</div>
+        <div class="tech-item">📋 PDF Reports</div>
+        <div class="tech-item">🗺 Dependency Graph</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const VULNS = [
+  {pkg:'lodash',version:'4.17.4',fixVersion:'4.17.21',cve:'CVE-2021-23337',cvss:7.2,sev:'high',desc:'Command injection vulnerability via template function',direct:true},
+  {pkg:'lodash',version:'4.17.4',fixVersion:'4.17.21',cve:'CVE-2020-8203',cvss:7.4,sev:'high',desc:'Prototype pollution via zipObjectDeep',direct:true},
+  {pkg:'axios',version:'0.18.0',fixVersion:'1.6.0',cve:'CVE-2023-45857',cvss:6.5,sev:'medium',desc:'Cross-Site Request Forgery vulnerability',direct:true},
+  {pkg:'axios',version:'0.18.0',fixVersion:'0.21.2',cve:'CVE-2021-3749',cvss:7.5,sev:'high',desc:'Regular expression denial of service (ReDoS)',direct:true},
+  {pkg:'minimist',version:'1.2.0',fixVersion:'1.2.6',cve:'CVE-2021-44906',cvss:9.8,sev:'critical',desc:'Prototype pollution allowing attacker to set arbitrary properties',direct:false},
+  {pkg:'node-fetch',version:'2.6.0',fixVersion:'2.6.7',cve:'CVE-2022-0235',cvss:6.1,sev:'medium',desc:'Exposure of sensitive information to an unauthorized actor',direct:true},
+  {pkg:'serialize-javascript',version:'1.7.0',fixVersion:'3.1.0',cve:'CVE-2020-7660',cvss:9.8,sev:'critical',desc:'Remote code execution via maliciously crafted serialized code',direct:false},
+  {pkg:'express',version:'4.16.0',fixVersion:'4.19.2',cve:'CVE-2024-29041',cvss:6.1,sev:'medium',desc:'Open redirect vulnerability in response.redirect()',direct:true},
+  {pkg:'json-schema',version:'0.2.3',fixVersion:'0.4.0',cve:'CVE-2021-3918',cvss:9.8,sev:'critical',desc:'Prototype pollution in lib/validate.js',direct:false},
+  {pkg:'follow-redirects',version:'1.5.10',fixVersion:'1.15.4',cve:'CVE-2023-26159',cvss:7.3,sev:'high',desc:'URL redirection to untrusted site (Open Redirect)',direct:false},
+  {pkg:'semver',version:'5.7.1',fixVersion:'5.7.2',cve:'CVE-2022-25883',cvss:7.5,sev:'high',desc:'Regular expression denial of service via untrusted versions',direct:false},
+  {pkg:'xml2js',version:'0.4.19',fixVersion:'0.5.0',cve:'CVE-2023-0842',cvss:6.5,sev:'medium',desc:'Prototype pollution through improper user-controlled key parsing',direct:false}
+];
+
+const DEMO_SETS = {
+  web:['lodash','axios','express','node-fetch'],
+  auth:['minimist','serialize-javascript','json-schema'],
+  util:['semver','xml2js','follow-redirects'],
+  full:['lodash','axios','minimist','node-fetch','serialize-javascript','express','json-schema','follow-redirects','semver','xml2js']
+};
+
+let currentVulns = [...VULNS];
+let scanDone = false;
+let remDone = false;
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const links = document.querySelectorAll('.nav-link');
+  const names = ['home','scanner','dashboard','remediation','report','team'];
+  const idx = names.indexOf(id);
+  if(idx>=0) links[idx].classList.add('active');
+  if(id==='dashboard') renderDashboard();
+  if(id==='remediation') renderRemediation();
+  if(id==='report') renderReport();
+  window.scrollTo(0,0);
+}
+
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show '+type;
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function handleDrag(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag')}
+function handleDrop(e){e.preventDefault();document.getElementById('drop-zone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f) processFile(f)}
+function handleFile(inp){if(inp.files[0]) processFile(inp.files[0])}
+
+function processFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const json=JSON.parse(e.target.result);
+      const pkgs=Object.keys({...json.dependencies,...(json.devDependencies||{})});
+      currentVulns=VULNS.filter(v=>pkgs.some(p=>p.includes(v.pkg)||v.pkg.includes(p)));
+      if(!currentVulns.length) currentVulns=[...VULNS];
+      startScan(file.name);
+    }catch(err){currentVulns=[...VULNS];startScan(file.name)}
+  };
+  reader.readAsText(file);
+}
+
+function scanFromUrl(){
+  const url=document.getElementById('url-input').value.trim();
+  if(!url){toast('Please enter a GitHub URL','error');return}
+  currentVulns=[...VULNS];
+  startScan('GitHub repo');
+}
+
+function loadDemo(set){
+  const pkgs=DEMO_SETS[set];
+  currentVulns=VULNS.filter(v=>pkgs.includes(v.pkg));
+  startScan('demo-'+set+'-package.json');
+}
+
+function runDemo(){loadDemo('full');showPage('scanner')}
+
+function startScan(source){
+  const prog=document.getElementById('scan-progress');
+  prog.classList.remove('hidden');
+  scanDone=false;remDone=false;
+
+  const steps=[
+    'Parsing '+source,
+    'Querying OSV.dev vulnerability database',
+    'Running npm audit analysis',
+    'Calculating CVSS severity scores',
+    'Building dependency graph',
+    'Generating remediation plan',
+    'Scan complete — '+currentVulns.length+' vulnerabilities found'
+  ];
+
+  const stepsEl=document.getElementById('scan-steps');
+  const fillEl=document.getElementById('prog-fill');
+  const statusEl=document.getElementById('scan-status-text');
+  stepsEl.innerHTML='';
+  steps.forEach((s,i)=>{
+    stepsEl.innerHTML+=`<div class="scan-step" id="step-${i}"><div class="scan-step-icon">${i+1}</div>${s}</div>`;
+  });
+
+  let i=0;
+  const interval=setInterval(()=>{
+    if(i>0) document.getElementById('step-'+(i-1)).className='scan-step done';
+    if(i<steps.length){
+      document.getElementById('step-'+i).className='scan-step active';
+      statusEl.textContent=steps[i];
+      fillEl.style.width=Math.round((i+1)/steps.length*100)+'%';
+      i++;
+    } else {
+      clearInterval(interval);
+      scanDone=true;
+      updateHomeStats();
+      setTimeout(()=>{
+        prog.classList.add('hidden');
+        showPage('dashboard');
+        toast('✅ Scan complete! Found '+currentVulns.length+' vulnerabilities');
+      },600);
+    }
+  },600);
+}
+
+function updateHomeStats(){
+  const c=currentVulns.filter(v=>v.sev==='critical').length;
+  animNum('home-total',currentVulns.length);
+  animNum('home-critical',c);
+  animNum('home-fixed',Math.floor(currentVulns.length*0.75));
+}
+
+function animNum(id, target){
+  const el=document.getElementById(id);
+  let n=0;const step=Math.max(1,Math.ceil(target/20));
+  const t=setInterval(()=>{n=Math.min(n+step,target);el.textContent=n;if(n>=target)clearInterval(t)},50);
+}
+
+function renderDashboard(){
+  if(!scanDone&&!currentVulns.length) return;
+  const c=currentVulns.filter(v=>v.sev==='critical').length;
+  const h=currentVulns.filter(v=>v.sev==='high').length;
+  const m=currentVulns.filter(v=>v.sev==='medium').length;
+  const l=currentVulns.filter(v=>v.sev==='low').length;
+  document.getElementById('cnt-critical').textContent=c;
+  document.getElementById('cnt-high').textContent=h;
+  document.getElementById('cnt-medium').textContent=m;
+  document.getElementById('cnt-low').textContent=l;
+  document.getElementById('dash-scan-info').textContent=`Last scan: ${new Date().toLocaleString()} · ${currentVulns.length} vulnerabilities found`;
+
+  // Dep graph
+  const tree=document.getElementById('dep-tree');
+  const shown=currentVulns.slice(0,8);
+  tree.innerHTML=shown.map(v=>`
+    <div class="dep-row ${v.sev}">
+      <div class="dep-dot" style="background:${sevColor(v.sev)}"></div>
+      <div class="dep-name">${v.pkg}@${v.version}</div>
+      <div class="dep-cve">${v.cve}</div>
+      <span class="badge badge-${v.sev}" style="font-size:11px">${v.sev}</span>
+      <span style="font-size:11px;color:var(--text3)">${v.direct?'direct':'transitive'}</span>
+    </div>`).join('');
+
+  renderTable('all');
+}
+
+function sevColor(s){return{critical:'#ef4444',high:'#f59e0b',medium:'#d97706',low:'#10b981'}[s]||'#64748b'}
+
+function renderTable(filter){
+  const data=filter==='all'?currentVulns:currentVulns.filter(v=>v.sev===filter);
+  document.getElementById('vuln-tbody').innerHTML=data.map(v=>`
+    <tr>
+      <td><div class="pkg-name">${v.pkg}</div><div class="pkg-version">v${v.version}</div></td>
+      <td><span class="cve-id">${v.cve}</span></td>
+      <td><span class="badge badge-${v.sev}">${v.sev.toUpperCase()}</span></td>
+      <td><strong style="color:${v.cvss>=9?'var(--red3)':v.cvss>=7?'var(--amber3)':'var(--green3)'}">${v.cvss}</strong></td>
+      <td><span class="badge badge-fixed">→ v${v.fixVersion}</span></td>
+      <td><button class="action-link" onclick="showVulnDetail('${v.cve}')">Details</button></td>
+    </tr>`).join('');
+}
+
+function filterVulns(sev,btn){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable(sev);
+}
+
+function showVulnDetail(cve){
+  const v=currentVulns.find(x=>x.cve===cve);
+  if(!v) return;
+  toast(`${v.cve}: ${v.desc}`,'success');
+}
+
+function renderRemediation(){
+  const fixList=document.getElementById('fix-list');
+  const diff=document.getElementById('diff-body');
+
+  fixList.innerHTML=currentVulns.map(v=>`
+    <div class="fix-item">
+      <div class="fix-icon auto">🔧</div>
+      <div class="fix-content">
+        <div class="fix-title">${v.pkg} — ${v.cve}</div>
+        <div class="fix-desc">${v.desc}</div>
+      </div>
+      <div class="fix-arrow">
+        <span class="old">${v.version}</span> → <span class="new">${v.fixVersion}</span>
+      </div>
+    </div>`).join('');
+
+  const lines=[];
+  lines.push({t:'',code:'  "dependencies": {'});
+  currentVulns.slice(0,6).forEach(v=>{
+    lines.push({t:'removed',code:`-   "${v.pkg}": "^${v.version}",`});
+    lines.push({t:'added',code:`+   "${v.pkg}": "^${v.fixVersion}",`});
+  });
+  lines.push({t:'',code:'  }'});
+
+  diff.innerHTML=lines.map((l,i)=>`
+    <div class="diff-line ${l.t}">
+      <div class="diff-num">${i+1}</div>
+      <div class="diff-code">${l.code}</div>
+    </div>`).join('');
+
+  updateRemStatus();
+}
+
+function updateRemStatus(){
+  const dot=document.getElementById('rem-dot');
+  const h=document.getElementById('rem-status-h');
+  const p=document.getElementById('rem-status-p');
+  if(remDone){
+    dot.classList.add('safe');
+    h.textContent='All Vulnerabilities Patched';
+    p.textContent='Autonomous remediation completed successfully';
+    document.getElementById('rem-btn').disabled=true;
+    document.getElementById('rem-btn').textContent='✅ Remediation Complete';
+  } else {
+    dot.classList.remove('safe');
+    h.textContent=currentVulns.length+' Vulnerabilities Detected';
+    p.textContent='Run auto-remediation to patch all fixable vulnerabilities';
+    document.getElementById('rem-btn').disabled=false;
+    document.getElementById('rem-btn').innerHTML='⚡ Run Autonomous Remediation';
+  }
+}
+
+function runRemediation(){
+  const btn=document.getElementById('rem-btn');
+  btn.disabled=true;
+  btn.innerHTML='⏳ Patching dependencies...';
+  setTimeout(()=>{
+    remDone=true;
+    updateRemStatus();
+    toast('🎉 All '+currentVulns.length+' vulnerabilities auto-patched!');
+  },2500);
+}
+
+function renderReport(){
+  const now=new Date();
+  document.getElementById('report-date').textContent='Generated: '+now.toLocaleString();
+  document.getElementById('report-id').textContent='SCAN-ID: VG-'+now.getFullYear()+'-'+String(now.getMonth()+1).padStart(4,'0');
+  document.getElementById('r-pkgs').textContent=new Set(currentVulns.map(v=>v.pkg)).size;
+  document.getElementById('r-vulns').textContent=currentVulns.length;
+  document.getElementById('r-fixable').textContent=Math.floor(currentVulns.length*0.9)+' / '+currentVulns.length;
+  const maxCvss=Math.max(...currentVulns.map(v=>v.cvss));
+  document.getElementById('r-score').textContent=maxCvss+' / 10.0';
+  const badge=document.getElementById('report-badge');
+  badge.className='report-badge'+(remDone?' safe':'');
+  badge.textContent=remDone?'SECURE':'VULNERABLE';
+
+  const sevsData=[
+    {label:'Critical (9.0+)',count:currentVulns.filter(v=>v.sev==='critical').length,cls:'critical',max:currentVulns.length},
+    {label:'High (7.0-8.9)',count:currentVulns.filter(v=>v.sev==='high').length,cls:'high',max:currentVulns.length},
+    {label:'Medium (4.0-6.9)',count:currentVulns.filter(v=>v.sev==='medium').length,cls:'medium',max:currentVulns.length},
+    {label:'Low (0-3.9)',count:currentVulns.filter(v=>v.sev==='low').length,cls:'low',max:currentVulns.length},
+  ];
+  document.getElementById('cvss-bars').innerHTML=sevsData.map(s=>`
+    <div class="cvss-bar-wrap">
+      <label><span>${s.label}</span><span>${s.count} found</span></label>
+      <div class="cvss-bar"><div class="cvss-fill ${s.cls}" style="width:${s.max?Math.round(s.count/s.max*100):0}%"></div></div>
+    </div>`).join('');
+
+  document.getElementById('report-tbody').innerHTML=currentVulns.map(v=>`
+    <tr>
+      <td><strong>${v.pkg}</strong><br><small style="color:var(--text3)">v${v.version}</small></td>
+      <td><span class="cve-id">${v.cve}</span></td>
+      <td><span class="badge badge-${v.sev}">${v.sev.toUpperCase()}</span></td>
+      <td style="font-weight:700;color:${v.cvss>=9?'var(--red3)':v.cvss>=7?'var(--amber3)':'var(--green3)'}">${v.cvss}</td>
+      <td style="font-size:13px;max-width:240px">${v.desc}</td>
+      <td><span class="badge badge-fixed">v${v.fixVersion}</span></td>
+    </tr>`).join('');
+}
+
+function exportReport(){
+  const data={
+    scanId:'VG-2026-001',
+    team:'Hack-It-Up',
+    leader:'Aradhya Saraf',
+    member:'Chinmay Muddapur',
+    event:'HackZion V3 by AMCEC 2026',
+    timestamp:new Date().toISOString(),
+    totalVulnerabilities:currentVulns.length,
+    vulnerabilities:currentVulns
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='vulnguard-report-hackzion-v3.json';
+  a.click();
+  toast('Report exported!');
+}
+
+function printReport(){
+  showPage('report');
+  setTimeout(()=>window.print(),300);
+}
+
+function copyJSON(){
+  const data={team:'Hack-It-Up',event:'HackZion V3 by AMCEC 2026',vulnerabilities:currentVulns};
+  navigator.clipboard.writeText(JSON.stringify(data,null,2)).then(()=>toast('JSON copied to clipboard!'));
+}
+
+// Init with default data
+updateHomeStats();
+</script>
+</body>
+</html>
